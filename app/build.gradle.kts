@@ -48,6 +48,17 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.navigation.compose)
+
+    // Icons Extended (для иконок Delete, Edit, ExitToApp)
+    implementation("androidx.compose.material:material-icons-extended:1.5.4")
+
+    // Compose Navigation
+    implementation("androidx.navigation:navigation-compose:2.7.5")
+
+    // ViewModel Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
