@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -26,42 +25,39 @@ fun TaskEditScreen(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var dueDate by remember { mutableStateOf<Long?>(null) }
-
+    
     val state by viewModel.state.collectAsState()
-
+    
     // Реагируем на успешное сохранение
     LaunchedEffect(state) {
         if (state is TaskEditState.Success) {
+            println("📝 [TaskEditScreen] Save success, calling onSaveSuccess")
             viewModel.resetState()
-            // Очищаем поля
-            title = ""
-            description = ""
-            dueDate = null
             onSaveSuccess()
         }
         if (state is TaskEditState.Error) {
-            // Можно показать Snackbar, пока просто логируем
-            println("❌ Error: ${(state as TaskEditState.Error).message}")
+            println("❌ [TaskEditScreen] Save error: ${(state as TaskEditState.Error).message}")
         }
     }
-
+    
     val showDatePicker = {
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH)
         val day = calendar.get(Calendar.DAY_OF_MONTH)
-
+        
         DatePickerDialog(
             context,
             { _, selectedYear, selectedMonth, selectedDay ->
                 val selectedDate = Calendar.getInstance()
                 selectedDate.set(selectedYear, selectedMonth, selectedDay)
                 dueDate = selectedDate.timeInMillis
+                println("📅 [TaskEditScreen] Date selected: ${formatDate(dueDate!!)}")
             },
             year, month, day
         ).show()
     }
-
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -71,9 +67,9 @@ fun TaskEditScreen(
             text = if (taskId == null) "Create New Task" else "Edit Task",
             style = MaterialTheme.typography.headlineSmall
         )
-
+        
         Spacer(modifier = Modifier.height(16.dp))
-
+        
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
@@ -81,9 +77,9 @@ fun TaskEditScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
-
+        
         Spacer(modifier = Modifier.height(8.dp))
-
+        
         OutlinedTextField(
             value = description,
             onValueChange = { description = it },
@@ -91,9 +87,9 @@ fun TaskEditScreen(
             modifier = Modifier.fillMaxWidth(),
             minLines = 3
         )
-
+        
         Spacer(modifier = Modifier.height(8.dp))
-
+        
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -115,15 +111,15 @@ fun TaskEditScreen(
                 )
                 Text(
                     text = dueDate?.let { formatDate(it) } ?: "Not set",
-                    color = if (dueDate == null)
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    else
+                    color = if (dueDate == null) 
+                        MaterialTheme.colorScheme.onSurfaceVariant 
+                    else 
                         MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
-
+        
         if (dueDate != null) {
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(
@@ -133,9 +129,9 @@ fun TaskEditScreen(
                 Text("Clear due date")
             }
         }
-
+        
         Spacer(modifier = Modifier.height(16.dp))
-
+        
         when (state) {
             is TaskEditState.Saving -> {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -150,10 +146,11 @@ fun TaskEditScreen(
             }
             else -> {}
         }
-
+        
         Button(
-            onClick = {
+            onClick = { 
                 if (title.isNotBlank()) {
+                    println("📝 [TaskEditScreen] Save button clicked: title='$title'")
                     viewModel.saveTask(
                         title = title,
                         description = description,
