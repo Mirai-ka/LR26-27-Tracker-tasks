@@ -2,16 +2,14 @@ package com.example.lr26_27_tracker_tasks.data.repository
 
 import com.example.lr26_27_tracker_tasks.data.api.FakeTaskApiService
 import com.example.lr26_27_tracker_tasks.data.model.Task
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 
 class TaskRepositoryStub {
 
     private val api = FakeTaskApiService()
 
-    fun getAllTasks(): Flow<List<Task>> = flow {
-        val tasks = api.getTasks()
-        emit(tasks)
+    // Возвращаем список синхронно (без Flow для простоты)
+    suspend fun getAllTasks(): List<Task> {
+        return api.getTasks()
     }
 
     suspend fun createTask(title: String, description: String, dueDate: Long = 0L): Result<Task> {

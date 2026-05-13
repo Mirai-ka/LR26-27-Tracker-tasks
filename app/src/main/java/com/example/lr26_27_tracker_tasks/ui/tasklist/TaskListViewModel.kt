@@ -10,40 +10,32 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class TaskListViewModel : ViewModel() {
-    
+
     private val repository = TaskRepositoryStub()
-    
+
     private val _state = MutableStateFlow<TaskListState>(TaskListState.Loading)
     val state: StateFlow<TaskListState> = _state.asStateFlow()
-    
+
     init {
         loadTasks()
     }
-    
+
     fun loadTasks() {
         viewModelScope.launch {
             _state.value = TaskListState.Loading
             try {
-                repository.getAllTasks().collect { tasks ->
-                    _state.value = TaskListState.Success(tasks)
-                }
+                val tasks = repository.getAllTasks() // Получаем список
+                _state.value = TaskListState.Success(tasks)
             } catch (e: Exception) {
                 _state.value = TaskListState.Error(e.message ?: "Unknown error")
             }
         }
     }
-    
+
     fun deleteTask(taskId: String) {
         viewModelScope.launch {
             repository.deleteTask(taskId)
-            loadTasks()
-        }
-    }
-    
-    fun addTask(task: Task) {
-        viewModelScope.launch {
-            repository.createTask(task.title, task.description)
-            loadTasks()
+            loadTasks() // Перезагружаем после удаления
         }
     }
 }

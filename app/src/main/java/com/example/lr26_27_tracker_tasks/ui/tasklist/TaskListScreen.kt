@@ -28,6 +28,11 @@ fun TaskListScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    // Автоматически обновляем список при возврате с экрана редактирования
+    LaunchedEffect(Unit) {
+        viewModel.loadTasks()
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -77,9 +82,6 @@ fun TaskListScreen(
                             items(tasks) { task ->
                                 TaskCard(
                                     task = task,
-                                    onToggleComplete = {
-                                        // Обновление статуса (будет в части 2)
-                                    },
                                     onDelete = { viewModel.deleteTask(task.id) },
                                     onEdit = { onNavigateToEdit(task.id) }
                                 )
@@ -102,7 +104,6 @@ fun TaskListScreen(
 @Composable
 fun TaskCard(
     task: Task,
-    onToggleComplete: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit
 ) {
@@ -127,14 +128,13 @@ fun TaskCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Чекбокс и название задачи
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
                     Checkbox(
                         checked = task.is_done,
-                        onCheckedChange = { onToggleComplete() }
+                        onCheckedChange = { /* Будет реализовано в части 2 */ }
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -148,7 +148,6 @@ fun TaskCard(
                     )
                 }
 
-                // Кнопки действий
                 Row {
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit")
@@ -159,7 +158,6 @@ fun TaskCard(
                 }
             }
 
-            // Описание (если есть)
             if (task.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -170,7 +168,6 @@ fun TaskCard(
                     modifier = Modifier.padding(start = 48.dp)
                 )
 
-                // Кнопка "Показать больше"
                 if (task.description.length > 100) {
                     TextButton(
                         onClick = { expanded = !expanded },
@@ -181,7 +178,6 @@ fun TaskCard(
                 }
             }
 
-            // Дата (если есть)
             if (task.due_date > 0) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -198,9 +194,8 @@ fun TaskCard(
     }
 }
 
-// Форматирование даты
 private fun formatDate(timestamp: Long): String {
     val date = Date(timestamp)
-    val format = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+    val format = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     return format.format(date)
 }

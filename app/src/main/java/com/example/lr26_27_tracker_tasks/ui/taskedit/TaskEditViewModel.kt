@@ -20,11 +20,7 @@ class TaskEditViewModel : ViewModel() {
     fun saveTask(title: String, description: String, dueDate: Long) {
         viewModelScope.launch {
             _state.value = TaskEditState.Saving
-            val result = repository.createTask(
-                title = title,
-                description = description,
-                dueDate = dueDate
-            )
+            val result = repository.createTask(title, description, dueDate)
             result.onSuccess { task ->
                 _state.value = TaskEditState.Success(task)
             }.onFailure { error ->

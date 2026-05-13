@@ -4,11 +4,15 @@ import com.example.lr26_27_tracker_tasks.data.model.Task
 
 class FakeTaskApiService {
 
-    private val tasks = mutableListOf<Task>()
+    // Сделаем список изменяемым и доступным
+    private val _tasks = mutableListOf<Task>()
+    val tasks: List<Task>
+        get() = _tasks.toList()
 
     suspend fun getTasks(): List<Task> {
         kotlinx.coroutines.delay(300)
-        return tasks.toList()
+        println("📋 Getting tasks, count: ${_tasks.size}")
+        return _tasks.toList()
     }
 
     suspend fun createTask(title: String, description: String, dueDate: Long = 0L): Task {
@@ -19,23 +23,28 @@ class FakeTaskApiService {
             description = description,
             due_date = dueDate,
             is_done = false,
-            created_at = System.currentTimeMillis()
+            created_at = System.currentTimeMillis(),
+            updated_at = System.currentTimeMillis()
         )
-        tasks.add(newTask)
+        _tasks.add(newTask)
+        println("✅ Task created: ${newTask.title}, total tasks: ${_tasks.size}")
         return newTask
     }
 
     suspend fun updateTask(task: Task): Task {
         kotlinx.coroutines.delay(500)
-        val index = tasks.indexOfFirst { it.id == task.id }
+        val index = _tasks.indexOfFirst { it.id == task.id }
         if (index != -1) {
-            tasks[index] = task.copy(updated_at = System.currentTimeMillis())
+            _tasks[index] = task.copy(updated_at = System.currentTimeMillis())
+            println("✏️ Task updated: ${task.title}")
         }
         return task
     }
 
     suspend fun deleteTask(id: String): Boolean {
         kotlinx.coroutines.delay(300)
-        return tasks.removeIf { it.id == id }
+        val removed = _tasks.removeIf { it.id == id }
+        println("🗑️ Task deleted, remaining tasks: ${_tasks.size}")
+        return removed
     }
 }

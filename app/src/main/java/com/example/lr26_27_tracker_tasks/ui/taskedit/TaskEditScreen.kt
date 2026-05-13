@@ -1,12 +1,18 @@
 package com.example.lr26_27_tracker_tasks.ui.taskedit
 
+import android.app.DatePickerDialog
+import android.icu.util.Calendar
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lr26_27_tracker_tasks.ui.tasklist.TaskEditState
+import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -16,29 +22,44 @@ fun TaskEditScreen(
     onSaveSuccess: () -> Unit,
     viewModel: TaskEditViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var dueDate by remember { mutableStateOf<Long?>(null) }
-    var showDatePicker by remember { mutableStateOf(false) }
 
     val state by viewModel.state.collectAsState()
 
+    // Реагируем на успешное сохранение
     LaunchedEffect(state) {
         if (state is TaskEditState.Success) {
             viewModel.resetState()
+            // Очищаем поля
+            title = ""
+            description = ""
+            dueDate = null
             onSaveSuccess()
+        }
+        if (state is TaskEditState.Error) {
+            // Можно показать Snackbar, пока просто логируем
+            println("❌ Error: ${(state as TaskEditState.Error).message}")
         }
     }
 
-    // DatePicker диалог
-    if (showDatePicker) {
+    val showDatePicker = {
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
         DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            onDateSelected = { dateInMillis ->
-                dueDate = dateInMillis
-                showDatePicker = false
-            }
-        )
+            context,
+            { _, selectedYear, selectedMonth, selectedDay ->
+                val selectedDate = Calendar.getInstance()
+                selectedDate.set(selectedYear, selectedMonth, selectedDay)
+                dueDate = selectedDate.timeInMillis
+            },
+            year, month, day
+        ).show()
     }
 
     Column(
@@ -73,23 +94,43 @@ fun TaskEditScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Выбор даты
-        OutlinedCard(
-            onClick = { showDatePicker = true },
-            modifier = Modifier.fillMaxWidth()
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showDatePicker() },
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("📅 Due Date")
+                Text(
+                    text = "📅 Due Date",
+                    style = MaterialTheme.typography.bodyLarge
+                )
                 Text(
                     text = dueDate?.let { formatDate(it) } ?: "Not set",
                     color = if (dueDate == null)
                         MaterialTheme.colorScheme.onSurfaceVariant
                     else
-                        MaterialTheme.colorScheme.primary
+                        MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium
                 )
+            }
+        }
+
+        if (dueDate != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
+                onClick = { dueDate = null },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Clear due date")
             }
         }
 
@@ -112,11 +153,13 @@ fun TaskEditScreen(
 
         Button(
             onClick = {
-                viewModel.saveTask(
-                    title = title,
-                    description = description,
-                    dueDate = dueDate ?: 0L
-                )
+                if (title.isNotBlank()) {
+                    viewModel.saveTask(
+                        title = title,
+                        description = description,
+                        dueDate = dueDate ?: 0L
+                    )
+                }
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = title.isNotBlank() && state !is TaskEditState.Saving
@@ -126,37 +169,8 @@ fun TaskEditScreen(
     }
 }
 
-// Простой DatePicker
-@Composable
-fun DatePickerDialog(
-    onDismissRequest: () -> Unit,
-    onDateSelected: (Long) -> Unit
-) {
-    val datePickerState = rememberDatePickerState()
-
-    androidx.compose.material3.DatePickerDialog(
-        onDismissRequest = onDismissRequest,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    datePickerState.selectedDateMillis?.let { onDateSelected(it) }
-                }
-            ) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("Cancel")
-            }
-        }
-    ) {
-        androidx.compose.material3.DatePicker(state = datePickerState)
-    }
-}
-
 private fun formatDate(timestamp: Long): String {
     val date = Date(timestamp)
-    val format = java.text.SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+    val format = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     return format.format(date)
 }
