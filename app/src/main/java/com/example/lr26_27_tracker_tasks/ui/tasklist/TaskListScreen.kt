@@ -12,9 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.lr26_27_tracker_tasks.data.auth.TokenManager
+import com.example.lr26_27_tracker_tasks.data.repository.TaskRepository
 import com.example.lr26_27_tracker_tasks.data.model.Task
 import java.text.SimpleDateFormat
 import java.util.*
@@ -23,12 +28,22 @@ import java.util.*
 @Composable
 fun TaskListScreen(
     onNavigateToEdit: (String?) -> Unit,
-    onSignOut: () -> Unit,
-    viewModel: TaskListViewModel = viewModel()
+    onSignOut: () -> Unit
 ) {
+    val context = LocalContext.current
+    val tokenManager = TokenManager(context)
+    val repository = TaskRepository(tokenManager)
+
+    val viewModel: TaskListViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer {
+                TaskListViewModel(repository)
+            }
+        }
+    )
+
     val state by viewModel.state.collectAsState()
 
-    // Автоматически обновляем список при возврате с экрана редактирования
     LaunchedEffect(Unit) {
         viewModel.loadTasks()
     }
@@ -63,23 +78,14 @@ fun TaskListScreen(
                 is TaskListState.Success -> {
                     val tasks = (state as TaskListState.Success).tasks
                     if (tasks.isEmpty()) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "📋 No tasks yet",
-                                style = MaterialTheme.typography.headlineSmall
-                            )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("📋 No tasks yet", style = MaterialTheme.typography.headlineSmall)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Tap + to add your first task",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("Tap + to add your first task")
                         }
                     } else {
                         LazyColumn {
-                            items(tasks) { task ->
+                            items(tasks, key = { it.id }) { task ->
                                 TaskCard(
                                     task = task,
                                     onDelete = { viewModel.deleteTask(task.id) },
@@ -92,7 +98,8 @@ fun TaskListScreen(
                 is TaskListState.Error -> {
                     Text(
                         text = "Error: ${(state as TaskListState.Error).message}",
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             }
@@ -100,102 +107,43 @@ fun TaskListScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskCard(
-    task: Task,
-    onDelete: () -> Unit,
-    onEdit: () -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (task.is_done)
-                MaterialTheme.colorScheme.surfaceVariant
-            else
-                MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+fun TaskCard(task: Task, onDelete: () -> Unit, onEdit: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Checkbox(
-                        checked = task.is_done,
-                        onCheckedChange = { /* Будет реализовано в части 2 */ }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    textDecoration = if (task.is_done) TextDecoration.LineThrough else null
+                )
+                if (task.description.isNotBlank()) {
                     Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        textDecoration = if (task.is_done) TextDecoration.LineThrough else null,
-                        color = if (task.is_done)
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else
-                            MaterialTheme.colorScheme.onSurface
+                        text = task.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                Row {
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit")
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete")
-                    }
+                if (task.due_date > 0) {
+                    Text(
+                        text = "Due: ${formatDate(task.due_date)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
-
-            if (task.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = task.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = if (expanded) Int.MAX_VALUE else 2,
-                    modifier = Modifier.padding(start = 48.dp)
-                )
-
-                if (task.description.length > 100) {
-                    TextButton(
-                        onClick = { expanded = !expanded },
-                        modifier = Modifier.padding(start = 48.dp)
-                    ) {
-                        Text(if (expanded) "Show less" else "Show more")
-                    }
-                }
-            }
-
-            if (task.due_date > 0) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "📅 Due: ${formatDate(task.due_date)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (task.due_date < System.currentTimeMillis() && !task.is_done)
-                        MaterialTheme.colorScheme.error
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 48.dp)
-                )
+            Row {
+                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Edit") }
+                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Delete") }
             }
         }
     }
 }
 
 private fun formatDate(timestamp: Long): String {
-    val date = Date(timestamp)
-    val format = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-    return format.format(date)
+    return SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(timestamp))
 }

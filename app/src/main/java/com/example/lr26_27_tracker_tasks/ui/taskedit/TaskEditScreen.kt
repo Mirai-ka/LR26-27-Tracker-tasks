@@ -10,6 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.lr26_27_tracker_tasks.data.auth.TokenManager
+import com.example.lr26_27_tracker_tasks.data.repository.TaskRepository
 import com.example.lr26_27_tracker_tasks.ui.tasklist.TaskEditState
 import java.text.SimpleDateFormat
 import java.util.*
@@ -18,68 +22,66 @@ import java.util.*
 @Composable
 fun TaskEditScreen(
     taskId: String?,
-    onSaveSuccess: () -> Unit,
-    viewModel: TaskEditViewModel = viewModel()
+    onSaveSuccess: () -> Unit
 ) {
     val context = LocalContext.current
+    val tokenManager = TokenManager(context)
+    val repository = TaskRepository(tokenManager)
+
+    val viewModel: TaskEditViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer {
+                TaskEditViewModel(repository)
+            }
+        }
+    )
+
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var dueDate by remember { mutableStateOf<Long?>(null) }
-    
+
     val state by viewModel.state.collectAsState()
-    
-    // Реагируем на успешное сохранение
+
     LaunchedEffect(state) {
         if (state is TaskEditState.Success) {
-            println("📝 [TaskEditScreen] Save success, calling onSaveSuccess")
             viewModel.resetState()
             onSaveSuccess()
         }
-        if (state is TaskEditState.Error) {
-            println("❌ [TaskEditScreen] Save error: ${(state as TaskEditState.Error).message}")
-        }
     }
-    
+
     val showDatePicker = {
         val calendar = Calendar.getInstance()
-        val year = calendar.get(Calendar.YEAR)
-        val month = calendar.get(Calendar.MONTH)
-        val day = calendar.get(Calendar.DAY_OF_MONTH)
-        
         DatePickerDialog(
             context,
-            { _, selectedYear, selectedMonth, selectedDay ->
-                val selectedDate = Calendar.getInstance()
-                selectedDate.set(selectedYear, selectedMonth, selectedDay)
-                dueDate = selectedDate.timeInMillis
-                println("📅 [TaskEditScreen] Date selected: ${formatDate(dueDate!!)}")
+            { _, year, month, day ->
+                val selected = Calendar.getInstance()
+                selected.set(year, month, day)
+                dueDate = selected.timeInMillis
             },
-            year, month, day
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
         ).show()
     }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(
-            text = if (taskId == null) "Create New Task" else "Edit Task",
+            text = if (taskId == null) "Create Task" else "Edit Task",
             style = MaterialTheme.typography.headlineSmall
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
-            label = { Text("Task Title *") },
+            label = { Text("Title") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         OutlinedTextField(
             value = description,
             onValueChange = { description = it },
@@ -87,87 +89,59 @@ fun TaskEditScreen(
             modifier = Modifier.fillMaxWidth(),
             minLines = 3
         )
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showDatePicker() },
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            modifier = Modifier.fillMaxWidth().clickable { showDatePicker() },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "📅 Due Date",
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                Text("📅 Due Date")
                 Text(
                     text = dueDate?.let { formatDate(it) } ?: "Not set",
-                    color = if (dueDate == null) 
-                        MaterialTheme.colorScheme.onSurfaceVariant 
-                    else 
-                        MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium
+                    color = if (dueDate == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
                 )
             }
         }
-        
+
         if (dueDate != null) {
             Spacer(modifier = Modifier.height(8.dp))
-            TextButton(
-                onClick = { dueDate = null },
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            TextButton(onClick = { dueDate = null }, modifier = Modifier.fillMaxWidth()) {
                 Text("Clear due date")
             }
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         when (state) {
             is TaskEditState.Saving -> {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                Spacer(modifier = Modifier.height(8.dp))
             }
             is TaskEditState.Error -> {
                 Text(
                     text = (state as TaskEditState.Error).message,
                     color = MaterialTheme.colorScheme.error
                 )
-                Spacer(modifier = Modifier.height(8.dp))
             }
             else -> {}
         }
-        
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Button(
-            onClick = { 
-                if (title.isNotBlank()) {
-                    println("📝 [TaskEditScreen] Save button clicked: title='$title'")
-                    viewModel.saveTask(
-                        title = title,
-                        description = description,
-                        dueDate = dueDate ?: 0L
-                    )
-                }
-            },
+            onClick = { viewModel.saveTask(title, description, dueDate ?: 0L) },
             modifier = Modifier.fillMaxWidth(),
             enabled = title.isNotBlank() && state !is TaskEditState.Saving
         ) {
-            Text(if (taskId == null) "Create Task" else "Update Task")
+            Text("Save")
         }
     }
 }
 
 private fun formatDate(timestamp: Long): String {
-    val date = Date(timestamp)
-    val format = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-    return format.format(date)
+    return SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(timestamp))
 }

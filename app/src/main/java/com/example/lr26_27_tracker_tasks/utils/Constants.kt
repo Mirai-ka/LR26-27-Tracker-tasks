@@ -1,13 +1,14 @@
 package com.example.lr26_27_tracker_tasks.utils
 
 object Constants {
-    // Supabase (замените позже на реальные)
+    // Supabase - ЗАМЕНИТЕ НА ВАШИ РЕАЛЬНЫЕ ЗНАЧЕНИЯ!
     const val SUPABASE_URL = "https://your-project.supabase.co"
     const val SUPABASE_ANON_KEY = "your-anon-key-here"
-    
+
+    // Ваш API базовый URL
+    const val BASE_URL = "https://your-api-server.com/api/"
+
+    // Таблицы Supabase
     const val TABLE_PROFILES = "profiles"
     const val TABLE_TASKS = "tasks"
-    
-    const val PREF_NAME = "task_tracker_prefs"
-    const val KEY_USER_ID = "user_id"
 }

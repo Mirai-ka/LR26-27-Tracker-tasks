@@ -1,5 +1,8 @@
 package com.example.lr26_27_tracker_tasks.data.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Task(
     val id: String = "",
     val user_id: String = "",

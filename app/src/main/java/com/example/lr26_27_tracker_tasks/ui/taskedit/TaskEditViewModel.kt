@@ -2,17 +2,16 @@ package com.example.lr26_27_tracker_tasks.ui.taskedit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.lr26_27_tracker_tasks.data.model.Task
-import com.example.lr26_27_tracker_tasks.data.repository.TaskRepositoryStub
+import com.example.lr26_27_tracker_tasks.data.repository.TaskRepository
 import com.example.lr26_27_tracker_tasks.ui.tasklist.TaskEditState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class TaskEditViewModel : ViewModel() {
-
-    private val repository = TaskRepositoryStub()
+class TaskEditViewModel(
+    private val repository: TaskRepository
+) : ViewModel() {
 
     private val _state = MutableStateFlow<TaskEditState>(TaskEditState.Idle)
     val state: StateFlow<TaskEditState> = _state.asStateFlow()

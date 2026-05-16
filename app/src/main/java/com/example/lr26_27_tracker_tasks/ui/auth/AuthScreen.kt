@@ -6,30 +6,45 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.lr26_27_tracker_tasks.data.auth.FirebaseAuthManager
+import com.example.lr26_27_tracker_tasks.data.auth.TokenManager
 import com.example.lr26_27_tracker_tasks.ui.tasklist.AuthUiState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
-    onAuthSuccess: () -> Unit,
-    viewModel: AuthViewModel = viewModel()
+    onAuthSuccess: () -> Unit
 ) {
+    val context = LocalContext.current
+
+    val viewModel: AuthViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer {
+                AuthViewModel(FirebaseAuthManager(), TokenManager(context))
+            }
+        }
+    )
+
     var isLoginMode by remember { mutableStateOf(true) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    
+
     val state by viewModel.state.collectAsState()
-    
+
     LaunchedEffect(state) {
         if (state is AuthUiState.Success) {
             onAuthSuccess()
             viewModel.resetState()
         }
     }
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -41,9 +56,9 @@ fun AuthScreen(
             text = if (isLoginMode) "Sign In" else "Sign Up",
             style = MaterialTheme.typography.headlineMedium
         )
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -52,9 +67,9 @@ fun AuthScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -64,9 +79,9 @@ fun AuthScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             singleLine = true
         )
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         when (state) {
             is AuthUiState.Loading -> {
                 CircularProgressIndicator()
@@ -80,7 +95,7 @@ fun AuthScreen(
             }
             else -> {}
         }
-        
+
         Button(
             onClick = {
                 if (isLoginMode) {
@@ -94,17 +109,17 @@ fun AuthScreen(
         ) {
             Text(if (isLoginMode) "Sign In" else "Sign Up")
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         TextButton(
-            onClick = { 
+            onClick = {
                 isLoginMode = !isLoginMode
                 viewModel.resetState()
             }
         ) {
             Text(
-                if (isLoginMode) "Don't have an account? Sign Up" 
+                if (isLoginMode) "Don't have an account? Sign Up"
                 else "Already have an account? Sign In"
             )
         }
